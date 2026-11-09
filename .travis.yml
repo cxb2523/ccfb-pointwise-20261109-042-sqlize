@@ -1,0 +1,11 @@
+language: go
+
+go:
+  - 1.25.x
+
+env: GO111MODULE=on
+
+go_import_path: github.com/sunary/sqlize
+
+script:
+  - go test -v ./...
