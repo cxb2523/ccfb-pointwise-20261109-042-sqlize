@@ -10,7 +10,6 @@ import (
 	ptypes "github.com/auxten/postgresql-parser/pkg/sql/types"
 	"github.com/pingcap/tidb/pkg/parser/ast"
 	"github.com/pingcap/tidb/pkg/parser/types"
-	"github.com/sunary/sqlize/utils"
 )
 
 // Table ...
@@ -347,11 +346,14 @@ func (t *Table) Diff(old Table) {
 	for i := range t.Indexes {
 		if j := old.getIndexIndex(t.Indexes[i].Name); t.Indexes[i].Action == MigrateAddAction &&
 			j >= 0 && old.Indexes[j].Action != MigrateNoAction {
-			if t.Indexes[i].Typ == old.Indexes[j].Typ && utils.SlideStrEqual(t.Indexes[i].Columns, old.Indexes[j].Columns) {
-				t.Indexes[i].Action = MigrateNoAction
-			} else {
-				t.Indexes[i] = old.Indexes[j]
+			if t.Indexes[i].hasChangedDefinition(old.Indexes[j]) {
+				// Keep the new (t.Indexes[i]) definition: migrationUp's
+				// MigrateModifyAction case renders this same index twice,
+				// once as a DROP and once as a CREATE, so it must reflect
+				// the new columns/type, not the old one being replaced.
 				t.Indexes[i].Action = MigrateModifyAction
+			} else {
+				t.Indexes[i].Action = MigrateNoAction
 			}
 		}
 	}
